@@ -27,7 +27,7 @@ def derivate_master_key(km: bytes) -> tuple:
     return (kc, ki)
 
 
-def protect_symetric(password: bytes, in_file: str) -> None:
+def protect_symmetric(password: bytes, in_file: str) -> tuple:
     # 01 - Derivate password
     salt = generate_key(8)
     km = derivate_password(password=password, salt=salt, counter=8192)
@@ -44,7 +44,7 @@ def protect_symetric(password: bytes, in_file: str) -> None:
         c = aes.encrypt(pad(data, AES.block_size))
 
         # 05 - Calculer le MAC - Protection en intégrité
-        h = HMAC.new(ki, digestmod=SHA256)
+        h = HMAC.new(key=ki, digestmod=SHA256)
         h.update(aes.iv)
         h.update(salt)
         h.update(c)
@@ -65,6 +65,6 @@ if __name__ == '__main__':
         print(f"Usage : {sys.argv[0]} <password> <input_file> <output_file>")
         sys.exit(1)
 
-    generate_encrypt(sys.argv[3], protect_symetric(
+    generate_encrypt(sys.argv[3], protect_symmetric(
         sys.argv[1].encode(), sys.argv[2]))
     sys.exit(0)

@@ -26,7 +26,7 @@ def derivate_master_key(km: bytes) -> tuple:
     return (kc, ki)
 
 
-def unprotect_symetric(password: bytes, in_file: str) -> bytes:
+def unprotect_symmetric(password: bytes, in_file: str) -> bytes:
     try:
         with open(in_file, 'rb') as fin:
             mac = fin.read(32)
@@ -42,7 +42,7 @@ def unprotect_symetric(password: bytes, in_file: str) -> bytes:
 
         # 03 - Verify MAC
         try:
-            h = HMAC.new(ki, digestmod=SHA256)
+            h = HMAC.new(key=ki, digestmod=SHA256)
             h.update(iv)
             h.update(salt)
             h.update(c)
@@ -71,6 +71,6 @@ if __name__ == '__main__':
         print(f"Usage : {sys.argv[0]} <password> <input_file> <output_file>")
         sys.exit(1)
 
-    generate_decrypt(sys.argv[3], unprotect_symetric(
+    generate_decrypt(sys.argv[3], unprotect_symmetric(
         sys.argv[1].encode(), sys.argv[2]))
     sys.exit(0)
