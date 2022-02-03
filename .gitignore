@@ -1,4 +1,2 @@
-__pycache__/
-openssl.pdf
-*.pem
-0*
+documents/
+__pycache__

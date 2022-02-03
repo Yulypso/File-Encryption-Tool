@@ -1,3 +1,10 @@
+#!/usr/bin/env python3
+
+'''
+Author: Thierry Khamphousone
+Date: 03/02/2022
+'''
+
 import sys
 from typing import Optional
 from Crypto.Random import get_random_bytes
@@ -32,3 +39,4 @@ if __name__ == '__main__':
 
     print(binascii.hexlify(derivate_password(
         sys.argv[1].encode(), sys.argv[2].encode(), int(sys.argv[3]))).decode('utf-8'))
+    sys.exit(0)

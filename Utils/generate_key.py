@@ -1,3 +1,10 @@
+#!/usr/bin/env python3
+
+'''
+Author: Thierry Khamphousone
+Date: 03/02/2022
+'''
+
 import sys
 from Crypto.Random import get_random_bytes
 
@@ -11,3 +18,4 @@ if __name__ == '__main__':
         sys.exit(1)
 
     print(generate_key(int(sys.argv[1])))
+    sys.exit(0)

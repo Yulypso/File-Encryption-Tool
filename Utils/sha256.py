@@ -1,3 +1,10 @@
+#!/usr/bin/env python3
+
+'''
+Author: Thierry Khamphousone
+Date: 03/02/2022
+'''
+
 import sys
 import binascii
 from Crypto.Hash import SHA256
@@ -22,3 +29,4 @@ if __name__ == '__main__':
     hash = sha256(sys.argv[1], 1024)
     print(hash)
     print(binascii.hexlify(hash).decode('utf-8'))
+    sys.exit(0)
