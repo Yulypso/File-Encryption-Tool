@@ -37,7 +37,7 @@ def encrypt(in_file: str, private_key: str, public_key: str) -> tuple:
     '''
     # Secret kc and IV random generation
     kc = generate_key(AES.key_size[2]) # AES KEY SIZE = 32 bytes
-    iv = generate_key(AES.block_size)      # AES BLOCK SIZE = 16 bytes
+    iv = generate_key(AES.block_size)  # AES BLOCK SIZE = 16 bytes
 
     # Open and read plain file
     with open(in_file, 'rb') as fin:
@@ -68,9 +68,9 @@ def decrypt(in_file: str, private_key: str, public_key: str) -> tuple:
     '''
     # Open and read parameters & plain file
     with open(in_file, 'rb') as fin:
-        ckey_buffer = fin.read(253)
-        iv = fin.read(16)
-        signature = fin.read(253)
+        ckey_buffer = fin.read(int(RSA.importKey(open(private_key).read()).size_in_bytes()))
+        iv = fin.read(AES.block_size) # AES BLOCK SIZE = 16 bytes
+        signature = fin.read(int(RSA.importKey(open(public_key).read()).size_in_bytes()))
         c_buffer = fin.read()
 
     #  Integrity check signature

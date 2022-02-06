@@ -55,6 +55,12 @@ For instance:
 
 Generate private/public keys for sender and receiver.
 
+Using generate-keys.sh script: 
+```sh
+❯ ./generate-keys.sh
+```
+
+Manually: 
 ```sh
 ❯ openssl genrsa 2122 > rsa-1-priv.pem
 ❯ openssl rsa -pubout -in rsa-1-priv.pem > rsa-1-pub.pem
