@@ -78,14 +78,14 @@ def decrypt(in_file: str, password: bytes) -> bytes:
 
     try:
         h.verify(hmac)
-
-        # Decryption
-        aes = AES.new(kc, AES.MODE_CBC, iv=iv)
-        p_buffer = unpad(aes.decrypt(c_buffer), AES.block_size)
-        return p_buffer
     except ValueError:
-        print("The message or the key is wrong")
-    return None
+        print('The message or the key is wrong')
+        sys.exit(1)
+    
+    # Data Decryption
+    aes = AES.new(kc, AES.MODE_CBC, iv=iv)
+    p_buffer = unpad(aes.decrypt(c_buffer), AES.block_size)
+    return p_buffer
 
 
 def generate_encrypt_file(out_file: str, parameters: tuple) -> None:

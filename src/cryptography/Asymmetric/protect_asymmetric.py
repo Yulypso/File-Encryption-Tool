@@ -7,23 +7,17 @@ Date: 03/02/2022
 
 
 import sys, os, argparse
-from typing import Hashable
 currentdir = os.path.dirname(os.path.realpath(__file__))
 parentdir = os.path.dirname(currentdir)
 sys.path.append(parentdir)
 
 from Crypto.Hash import SHA256
 from Crypto.Cipher import AES, PKCS1_OAEP
-from Crypto.Util.Padding import pad
-from Crypto.Hash import HMAC, SHA256
+from Crypto.Util.Padding import pad, unpad
 from Crypto.PublicKey import RSA
 from Crypto.Signature import pss
-from Crypto import Random
-from Crypto.Random import get_random_bytes
 
-from Utils.derivate_password import derivate_password
 from Utils.generate_key import generate_key
-from Utils.derivate_master_key import derivate_master_key
 
 
 def derivate_key(km: bytes) -> bytes:
@@ -39,10 +33,10 @@ def encrypt(in_file: str, private_key: str, public_key: str) -> tuple:
     '''
     Encryption using AES-256-CBC
     Input: bytes, receiver public_key, sender private_key
-    Output: CIPHERKEY || CIPHERTEXT || IV || Signature(W|C|IV)
+    Output: CIPHERKEY || IV || Signature(W|C|IV) || CIPHERTEXT
     '''
     # Secret kc and IV random generation
-    kc = get_random_bytes(AES.key_size[2]) # AES KEY SIZE = 32 bytes
+    kc = generate_key(AES.key_size[2]) # AES KEY SIZE = 32 bytes
     iv = generate_key(AES.block_size)      # AES BLOCK SIZE = 16 bytes
 
     # Open and read plain file
@@ -63,7 +57,44 @@ def encrypt(in_file: str, private_key: str, public_key: str) -> tuple:
     h = SHA256.new(ckey_buffer + c_buffer + iv)
     signature = pss.new(priv_key).sign(h)
 
-    return (ckey_buffer, c_buffer, iv, signature)
+    return (ckey_buffer, iv, signature, c_buffer)
+
+
+def decrypt(in_file: str, private_key: str, public_key: str) -> tuple:
+    '''
+    Encryption using AES-256-CBC
+    Input: CIPHERKEY || IV || Signature(W|C|IV), receiver private_key, sender public_key || CIPHERTEXT
+    Output: bytes
+    '''
+    # Open and read parameters & plain file
+    with open(in_file, 'rb') as fin:
+        ckey_buffer = fin.read(253)
+        iv = fin.read(16)
+        signature = fin.read(253)
+        c_buffer = fin.read()
+
+    #  Integrity check signature
+    pub_key = RSA.import_key(open(public_key).read())
+    h = SHA256.new(ckey_buffer + c_buffer + iv)
+    verifier = pss.new(pub_key)
+
+    try:
+        verifier.verify(h, signature)
+        print('The signature is authentic.')
+    except:
+        print('The signature is not authentic.')
+        sys.exit(1)
+
+    # Decryption of the symmetric key
+    priv_key = RSA.importKey(open(private_key).read())
+    pkcs1 = PKCS1_OAEP.new(priv_key, hashAlgo=SHA256)
+    kc = pkcs1.decrypt(ckey_buffer)
+
+    # Data Decryption from kc decrypted
+    aes = AES.new(kc, AES.MODE_CBC, iv)
+    p_buffer = unpad(aes.decrypt(c_buffer), AES.block_size)
+
+    return p_buffer
 
 
 def generate_encrypt_file(out_file: str, parameters: tuple) -> None:
@@ -98,6 +129,7 @@ def arg_parser() -> None:
     parser.add_argument('-pub', '--public', help='public key', dest='public_key', required=True)
     parser.add_argument('-i', '--in', help='input file', dest='fin', required=True)
     parser.add_argument('-o', '--out', help='output file', dest='fout', required=True)
+    
     return parser
 
 
@@ -107,6 +139,7 @@ if __name__ == '__main__':
 
     if args.encrypt:
         generate_encrypt_file(args.fout, encrypt(args.fin, args.private_key, args.public_key))
-    #elif args.decrypt:
-    #    generate_decrypt_file(args.fout, decrypt(args.fin, args.password.encode()))
+    elif args.decrypt:
+        generate_decrypt_file(args.fout, decrypt(args.fin, args.private_key, args.public_key))
+    
     sys.exit(0)
