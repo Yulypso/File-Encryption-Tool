@@ -18,6 +18,7 @@ This project is about creating a tool that encrypt/decrypt files using AES-256-C
 
 ### Symmetric encryption
 
+Usage: 
 ```sh
 ❯ python3 protect_symmetric.py -h
 usage: protect_symmetric.py [-h] (-e | -d) -i FIN -o FOUT password
@@ -60,4 +61,33 @@ Generate private/public keys for sender and receiver.
 
 ❯ openssl genrsa 2122 > rsa-2-priv.pem
 ❯ openssl rsa -pubout -in rsa-2-priv.pem > rsa-2-pub.pem
+```
+
+Usage: 
+```sh
+usage: protect_asymmetric.py [-h] (-e | -d) -priv PRIVATE_KEY -pub PUBLIC_KEY -i FIN -o FOUT
+
+AES-256-CBC symmetric encryption, RSA asymmetric encryption & RSA-SHA256 PKCS#1 PSS signature integrity check tool
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -e, --encrypt         Encryption mode
+  -d, --decrypt         Decryption mode
+  -priv PRIVATE_KEY, --private PRIVATE_KEY
+                        private key
+  -pub PUBLIC_KEY, --public PUBLIC_KEY
+                        public key
+  -i FIN, --in FIN      input file
+  -o FOUT, --out FOUT   output file
+```
+
+For instance:
+```sh
+❯ python3 protect_asymmetric.py -e -i ../../../plain -o ../../../encrypt -priv ../../../rsa-1-priv.pem -pub ../../../rsa-2-pub.pem
+
+[+]: Encryption success: ../../../encrypt
+
+❯ python3 protect_asymmetric.py -d -i ../../../plain -o ../../../encrypt -priv ../../../rsa-2-priv.pem -pub ../../../rsa-1-pub.pem
+
+[+]: Decryption success: ../../../decrypt
 ```

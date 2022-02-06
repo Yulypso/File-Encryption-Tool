@@ -5,6 +5,7 @@ Author: Thierry Khamphousone @Yulypso
 Date: 03/02/2022
 '''
 
+
 import sys, os, argparse
 currentdir = os.path.dirname(os.path.realpath(__file__))
 parentdir = os.path.dirname(currentdir)
@@ -13,6 +14,7 @@ sys.path.append(parentdir)
 from Crypto.Hash import SHA256, HMAC
 from Crypto.Cipher import AES
 from Crypto.Util.Padding import pad, unpad
+
 from Utils.derivate_password import derivate_password
 from Utils.generate_key import generate_key
 from Utils.derivate_master_key import derivate_master_key
@@ -36,7 +38,7 @@ def encrypt(in_file: str, password: bytes) -> tuple:
     with open(in_file, 'rb') as fin:
         data = fin.read()
 
-    # Encryption - Confidentiality
+    # Data Encryption - Confidentiality
     aes = AES.new(kc, AES.MODE_CBC, iv=iv)
     c_buffer = aes.encrypt(pad(data, AES.block_size))
 
@@ -85,6 +87,7 @@ def decrypt(in_file: str, password: bytes) -> bytes:
         print("The message or the key is wrong")
     return None
 
+
 def generate_encrypt_file(out_file: str, parameters: tuple) -> None:
     '''
     Write encrypted file bytes
@@ -93,6 +96,7 @@ def generate_encrypt_file(out_file: str, parameters: tuple) -> None:
     with open(out_file, 'wb') as fout:
         fout.write(mac + iv + salt + c)
     print(f'[+]: Encryption success: {out_file}')
+
 
 def generate_decrypt_file(out_file: str, plain_text: bytes) -> None:
     '''
