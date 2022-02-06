@@ -87,7 +87,8 @@ For instance:
 
 [+]: Encryption success: ../../../encrypt
 
-❯ python3 protect_asymmetric.py -d -i ../../../plain -o ../../../encrypt -priv ../../../rsa-2-priv.pem -pub ../../../rsa-1-pub.pem
+❯ python3 protect_asymmetric.py -d -i ../../../encrypt -o ../../../decrypt -priv ../../../rsa-2-priv.pem -pub ../../../rsa-1-pub.pem
 
+The signature is authentic.
 [+]: Decryption success: ../../../decrypt
 ```
