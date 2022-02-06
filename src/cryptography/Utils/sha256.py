@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 '''
-Author: Thierry Khamphousone
+Author: Thierry Khamphousone @Yulypso
 Date: 03/02/2022
 '''
 

@@ -29,7 +29,7 @@ def derivate_key(km: bytes) -> bytes:
 
 
 def protect_asymmetric(receiver_public_key: str, sender_private_key: str, in_file: str) -> tuple:
-    # 01 - Génération de la clé de chiffrement et de l'IV
+    # 01 - Generation de la clé de chiffrement et de l'IV
     kc = get_random_bytes(AES.key_size[2])
     iv = generate_key(16)
 
