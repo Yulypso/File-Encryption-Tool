@@ -53,11 +53,13 @@ For instance:
 
 ### Asymmetric encryption
 
+#### Generating keys
+
 Generate private/public keys for sender and receiver.
 
 Using generate-keys.sh script: 
 ```sh
-❯ ./generate-keys.sh
+❯ ./generate-keys.sh [((clear|cl) | <nb key-pair>)]
 ```
 
 Manually: 

@@ -1,3 +1,5 @@
 documents/
 __pycache__
 .DS_Store
+key-pair-*
+*.pem
