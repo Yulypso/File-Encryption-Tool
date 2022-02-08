@@ -6,6 +6,7 @@ Date: 03/02/2022
 '''
 
 
+from re import S
 import sys, os, argparse
 currentdir = os.path.dirname(os.path.realpath(__file__))
 parentdir = os.path.dirname(currentdir)
@@ -121,25 +122,43 @@ def arg_parser() -> None:
     Argument parser
     '''
     parser = argparse.ArgumentParser(
-        add_help=True, description='AES-256-CBC symmetric encryption, RSA asymmetric encryption & RSA-SHA256 PKCS#1 PSS signature integrity check tool')
-    group = parser.add_mutually_exclusive_group(required=True)
-    group.add_argument('-e', '--encrypt', help='Encryption mode', action='store_true')
-    group.add_argument('-d', '--decrypt', help='Decryption mode', action='store_true')
-    parser.add_argument('-priv', '--private', help='private key', dest='private_key', required=True)
-    parser.add_argument('-pub', '--public', help='public key', dest='public_key', required=True)
-    parser.add_argument('-i', '--in', help='input file', dest='fin', required=True)
-    parser.add_argument('-o', '--out', help='output file', dest='fout', required=True)
+        add_help=True, description='Multi user encryption tool: AES-256-CBC symmetric encryption, RSA asymmetric encryption & RSA-SHA256 PKCS#1 PSS signature integrity check')
+
+    subparsers = parser.add_subparsers(help="Multi User Encryption Mode")
+
+    group_encrypt = subparsers.add_parser("encryption", help="Encryption Mode")
+    group_encrypt.add_argument('-e', '--encrypt', help='Encryption mode', action='store_true', default=False, dest='encrypt', required=True)
+    group_encrypt.add_argument('input_file', help='plain input file')
+    group_encrypt.add_argument('output_file', help='encrypted output file')
+    group_encrypt.add_argument('my_sign_priv_key', help='my private signature key')
+    group_encrypt.add_argument('my_ciph_pub_key', help='my public cipher key')
+    group_encrypt.add_argument('users_ciph_pub', help='users public cipher key', nargs='+')
+
+    group_decrypt = subparsers.add_parser("decryption", help="Decryption Mode")
+    group_decrypt.add_argument('-d', '--decrypt', help='Decryption mode', action='store_true', default=False, dest='decrypt', required=True)
+    group_decrypt.add_argument('input_file', help='encrypted input file')
+    group_decrypt.add_argument('output_file', help='decrypted output file')
+    group_decrypt.add_argument('my_ciph_priv_key', help='my private cipher key')
+    group_decrypt.add_argument('my_ciph_pub_key', help='my public cipher key')
+    group_decrypt.add_argument('sender_sign_pub', help='sender public signature key', nargs='+')
     
     return parser
+
+# $ python multi_protect.py -e <input_file> <output_file> <my_sign_priv.pem> <my_ciph_pub.pem> [user1_ciph_pub.pem ... [userN_ciph_pub.pem]]
+
+# python multi_protect.py -d <input_file> <output_file> <my_priv_ciph.pem> <my_pub_ciph.pem> <sender_sign_pub.pem>
 
 
 if __name__ == '__main__':
 
     args = arg_parser().parse_args()
-
-    if args.encrypt:
-        generate_encrypt_file(args.fout, encrypt(args.fin, args.private_key, args.public_key))
-    elif args.decrypt:
-        generate_decrypt_file(args.fout, decrypt(args.fin, args.private_key, args.public_key))
+    if 'encrypt' in args:
+        # python3 multi_protect.py encryption -e ../../../plain ../../../encrypt ../../../key-pair-1/signature-1-priv.pem ../../../key-pair-1/cipher-1-pub.pem ../../../key-pair-2/cipher-2-pub.pem ../../../key-pair-3/cipher-3-pub.pem
+        print("encrytion")
+        #generate_encrypt_file(args.fout, encrypt(args.fin, args.private_key, args.public_key))
+    elif 'decrypt' in args:
+        # python3 multi_protect.py decryption -d ../../../encrypt ../../../decrypt ../../../key-pair-2/cipher-2-priv.pem ../../../key-pair-2/cipher-2-pub.pem ../../../key-pair-1/signature-1-pub.pem
+        print("decryption")
+        #generate_decrypt_file(args.fout, decrypt(args.fin, args.private_key, args.public_key))
     
     sys.exit(0)
