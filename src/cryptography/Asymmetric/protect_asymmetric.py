@@ -20,15 +20,6 @@ from Crypto.Signature import pss
 from Utils.generate_key import generate_key
 
 
-def derivate_key(km: bytes) -> bytes:
-    h = SHA256.new(data=None)
-    h.update(km[0:32])
-    h.update((0).to_bytes(4, byteorder='little'))
-    kc = h.digest()
-
-    return kc
-
-
 def encrypt(in_file: str, private_key: str, public_key: str) -> tuple:
     '''
     Encryption using AES-256-CBC

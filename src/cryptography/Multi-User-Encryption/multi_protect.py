@@ -6,7 +6,10 @@ Date: 03/02/2022
 '''
 
 
+from hashlib import sha256
+from pydoc import plain
 from re import S
+from shutil import ExecError
 import sys, os, argparse
 currentdir = os.path.dirname(os.path.realpath(__file__))
 parentdir = os.path.dirname(currentdir)
@@ -21,62 +24,72 @@ from Crypto.Signature import pss
 from Utils.generate_key import generate_key
 
 
-def derivate_key(km: bytes) -> bytes:
-    h = SHA256.new(data=None)
-    h.update(km[0:32])
-    h.update((0).to_bytes(4, byteorder='little'))
-    kc = h.digest()
+def generate_kc() -> bytes: 
+    return generate_key(AES.key_size[2]) # AES KEY SIZE = 32 bytes
 
-    return kc
+def generate_iv() -> bytes:
+    return generate_key(AES.block_size)  # AES BLOCK SIZE = 16 bytes
 
+def get_bytes_from_file(file: str):
+    with open(file, 'rb') as f:
+        return f.read()
 
-def encrypt(in_file: str, private_key: str, public_key: str) -> tuple:
+def symmetric_encryption(plain_b: bytes, kc: bytes, iv: bytes):
+    aes = AES.new(kc, AES.MODE_CBC, iv=iv)
+    return aes.encrypt(pad(plain_b + kc + iv, AES.block_size))
+
+def append_dest(msg: bytes, RSA: bytes, SHA: bytes) -> bytes:
+    return msg + b'\x00' + SHA + RSA
+
+def end_dest(msg: bytes, C: bytes) -> bytes:
+    return msg + b'\x01' + C
+
+def encrypt(input_file: str, my_sign_priv_key: str, my_ciph_pub_key: str, users_ciph_pub: list) -> bytes:
     '''
     Encryption using AES-256-CBC
-    Input: bytes, receiver public_key, sender private_key
-    Output: CIPHERKEY || IV || Signature(W|C|IV) || CIPHERTEXT
+    Input: 
+        - bytes to encrypt
+        - my_ciph_pub_key, users_ciph_pub to encrypt the symmetric key 
+        - my_sign_priv_key for signature
+    Output: 0x00 || SHA256(kpub-1) || RSA_kpub-1(Kc || IV) || ... || 0x00 || SHA256(kpub-N) || RSA_kpub-N(Kc || IV) || 0x01 || C || Sign
     '''
     # Secret kc and IV random generation
-    kc = generate_key(AES.key_size[2]) # AES KEY SIZE = 32 bytes
-    iv = generate_key(AES.block_size)  # AES BLOCK SIZE = 16 bytes
+    kc = generate_kc()
+    iv = generate_iv()
 
-    # Open and read plain file
-    with open(in_file, 'rb') as fin:
-        data = fin.read()
+
+    priv_key = RSA.import_key(get_bytes_from_file(my_sign_priv_key))
 
     # Data Encryption - Confidentiality    
-    aes = AES.new(kc, AES.MODE_CBC, iv=iv)
-    c_buffer = aes.encrypt(pad(data, AES.block_size))
+    cipher_b = symmetric_encryption(get_bytes_from_file(input_file), kc, iv)
 
-    # Encryption of the Symmetric Key - Confidentiality    
-    pub_key = RSA.importKey(open(public_key).read())
-    cipher = PKCS1_OAEP.new(pub_key, hashAlgo=SHA256)
-    ckey_buffer = cipher.encrypt(kc)       # W = ckey_buffer
+    # Encryption of the Symmetric Key for each pub key - Confidentiality    
+    users_ciph_pub.insert(0, my_ciph_pub_key)
 
-    # Signature W|iv|ciphered - Integrity
-    priv_key = RSA.import_key(open(private_key).read())
-    h = SHA256.new(ckey_buffer + c_buffer + iv)
-    signature = pss.new(priv_key).sign(h)
+    msg = b''
+    for user_ciph_pub in users_ciph_pub:
+        pub_key = RSA.importKey(get_bytes_from_file(user_ciph_pub))
+        cipher = PKCS1_OAEP.new(pub_key, hashAlgo=SHA256)
+        RSA_kpub = cipher.encrypt(kc + iv)    
 
-    return (ckey_buffer, iv, signature, c_buffer)
+        # Signature RSA_kpub - Integrity
+        h = SHA256.new(get_bytes_from_file(user_ciph_pub))
+        msg = append_dest(msg, RSA_kpub, h.digest())
 
+    msg = end_dest(msg, cipher_b)
 
-def decrypt(in_file: str, private_key: str, public_key: str) -> tuple:
-    '''
-    Encryption using AES-256-CBC
-    Input: CIPHERKEY || IV || Signature(W|C|IV), receiver private_key, sender public_key || CIPHERTEXT
-    Output: bytes
-    '''
-    # Open and read parameters & plain file
-    with open(in_file, 'rb') as fin:
-        ckey_buffer = fin.read(int(RSA.importKey(open(private_key).read()).size_in_bytes()))
-        iv = fin.read(AES.block_size) # AES BLOCK SIZE = 16 bytes
-        signature = fin.read(int(RSA.importKey(open(public_key).read()).size_in_bytes()))
-        c_buffer = fin.read()
+    print(cipher_b)
 
-    #  Integrity check signature
-    pub_key = RSA.import_key(open(public_key).read())
-    h = SHA256.new(ckey_buffer + c_buffer + iv)
+    # Signature global msg - Integrity
+    h = SHA256.new(msg)
+    sign = pss.new(priv_key).sign(h)
+    msg += sign
+
+    return (msg)
+
+def verify_signature(signed: bytes, signature: bytes, sender_sign_pub: bytes):
+    pub_key = RSA.import_key(get_bytes_from_file(sender_sign_pub))
+    h = SHA256.new(signed)
     verifier = pss.new(pub_key)
 
     try:
@@ -86,35 +99,120 @@ def decrypt(in_file: str, private_key: str, public_key: str) -> tuple:
         print('The signature is not authentic.')
         sys.exit(1)
 
+
+def get_kpub_sha256(input_bytes: bytes, my_ciph_pub_key: bytes):
+    sha256 = b''
+    kpub = b''
+
+    read_sha256 = False
+    read_kpub = False
+    read_cipher = False
+    found = False
+
+    out_sha256 = b''
+    out_kpub = b''
+    cipher_b = b''
+
+    h = SHA256.new(my_ciph_pub_key)
+
+    for b in input_bytes:
+        if read_cipher == True:
+            cipher_b += b.to_bytes(1, byteorder='little')
+        else:
+            if read_sha256 == True:
+                sha256 += b.to_bytes(1, byteorder='little')
+
+            elif read_kpub == True:
+                kpub += b.to_bytes(1, byteorder='little')
+
+            if (b.to_bytes(1, byteorder='little') == b'\x00' or b.to_bytes(1, byteorder='little') == b'\x01') and read_sha256 == False:
+                if len(kpub) > 0 and len(sha256) == 32 and sha256 == h.digest() and len(out_sha256) == 0 and len(out_kpub) == 0:
+                    if found == False:
+                        out_sha256 = sha256
+                        out_kpub = kpub
+                        found = True
+                if b.to_bytes(1, byteorder='little') == b'\x01':
+                    read_cipher = True
+
+                read_kpub = False
+                read_sha256 = True
+                sha256 = b''
+                kpub = b''
+            
+            if read_sha256 == True and len(sha256) == 32:
+                read_sha256 = False
+                read_kpub = True
+
+            
+            
+    return out_sha256, out_kpub, cipher_b
+
+
+def decrypt(input_file: str, my_ciph_priv_key: str, my_ciph_pub_key: str, sender_sign_pub: str) -> bytes:
+    '''
+    Encryption using AES-256-CBC
+    Input: 0x00 || SHA256(kpub-1) || RSA_kpub-1(Kc || IV) || ... || 0x00 || SHA256(kpub-N) || RSA_kpub-N(Kc || IV) || 0x01 || C || Sign
+    Output: bytes
+    '''
+    # Open input_file
+    input_bytes = get_bytes_from_file(input_file)
+
+    # Integrity check msg signature
+    verify_signature(input_bytes[:-256], input_bytes[-256:], sender_sign_pub)
+
+    sha256, kpub, cipher_b = get_kpub_sha256(input_bytes[:-256], get_bytes_from_file(my_ciph_pub_key))
+
+    print(len(sha256))
+    print(len(kpub))
+    print(len(cipher_b))
+    print(cipher_b)
+
+    if len(sha256) < 1 or len(kpub) < 1 or len(cipher_b) < 1:
+        print("Public key not found")
+        sys.exit(1)
+
+
+
     # Decryption of the symmetric key
-    priv_key = RSA.importKey(open(private_key).read())
+    priv_key = RSA.importKey(get_bytes_from_file(my_ciph_priv_key))
     pkcs1 = PKCS1_OAEP.new(priv_key, hashAlgo=SHA256)
-    kc = pkcs1.decrypt(ckey_buffer)
+    dec = pkcs1.decrypt(kpub)
+
+    #kc = dec[:32]
+    #iv = dec[32:]
+
+    #print(len(kc))
+    #print(len(iv))
 
     # Data Decryption from kc decrypted
-    aes = AES.new(kc, AES.MODE_CBC, iv)
-    p_buffer = unpad(aes.decrypt(c_buffer), AES.block_size)
+    # aes = AES.new(kc, AES.MODE_CBC, iv)
+    # p_buffer = unpad(aes.decrypt(c_buffer), AES.block_size)
 
-    return p_buffer
+    # return p_buffer
 
 
-def generate_encrypt_file(out_file: str, parameters: tuple) -> None:
+def generate_encrypt_file(out_file: str, msg: bytes) -> None:
     '''
     Write encrypted file bytes
     '''
-    ckey_buffer, c_buffer, iv, signature = parameters
-    with open(out_file, 'wb') as fout:
-        fout.write(ckey_buffer + c_buffer + iv + signature)
-    print(f'[+]: Encryption success: {out_file}')
+    try: 
+        with open(out_file, 'wb') as fout:
+            fout.write(msg)
+        print(f'[+]: Encryption success: {out_file}')
+    except:
+        print(f'[+]: Encyption error: {out_file}')
 
 
 def generate_decrypt_file(out_file: str, plain_text: bytes) -> None:
     '''
     Write decrypted file bytes
     '''
-    with open(out_file, 'wb') as fout:
-        fout.write(plain_text)
-    print(f'[+]: Decryption success: {out_file}')
+    try:
+        with open(out_file, 'wb') as fout:
+            fout.write(plain_text)
+            print(f'[+]: Decryption success: {out_file}')
+    except:
+        print(f'[X]: Decryption error: {out_file}')
 
 
 def arg_parser() -> None:
@@ -140,25 +238,29 @@ def arg_parser() -> None:
     group_decrypt.add_argument('output_file', help='decrypted output file')
     group_decrypt.add_argument('my_ciph_priv_key', help='my private cipher key')
     group_decrypt.add_argument('my_ciph_pub_key', help='my public cipher key')
-    group_decrypt.add_argument('sender_sign_pub', help='sender public signature key', nargs='+')
+    group_decrypt.add_argument('sender_sign_pub', help='sender public signature key')
     
     return parser
 
 # $ python multi_protect.py -e <input_file> <output_file> <my_sign_priv.pem> <my_ciph_pub.pem> [user1_ciph_pub.pem ... [userN_ciph_pub.pem]]
+#                                   X           X               X                   X               X
 
 # python multi_protect.py -d <input_file> <output_file> <my_priv_ciph.pem> <my_pub_ciph.pem> <sender_sign_pub.pem>
-
+#                                 X             X               X                   X               X
 
 if __name__ == '__main__':
 
     args = arg_parser().parse_args()
     if 'encrypt' in args:
         # python3 multi_protect.py encryption -e ../../../plain ../../../encrypt ../../../key-pair-1/signature-1-priv.pem ../../../key-pair-1/cipher-1-pub.pem ../../../key-pair-2/cipher-2-pub.pem ../../../key-pair-3/cipher-3-pub.pem
-        print("encrytion")
-        #generate_encrypt_file(args.fout, encrypt(args.fin, args.private_key, args.public_key))
+        generate_encrypt_file(args.output_file, encrypt(args.input_file, args.my_sign_priv_key, args.my_ciph_pub_key, args.users_ciph_pub))
+        sys.exit(0)
+    
     elif 'decrypt' in args:
         # python3 multi_protect.py decryption -d ../../../encrypt ../../../decrypt ../../../key-pair-2/cipher-2-priv.pem ../../../key-pair-2/cipher-2-pub.pem ../../../key-pair-1/signature-1-pub.pem
         print("decryption")
-        #generate_decrypt_file(args.fout, decrypt(args.fin, args.private_key, args.public_key))
-    
-    sys.exit(0)
+        generate_decrypt_file(args.output_file, decrypt(args.input_file, args.my_ciph_priv_key, args.my_ciph_pub_key, args.sender_sign_pub))
+        sys.exit(0)
+
+    print("Error")
+    sys.exit(1)
