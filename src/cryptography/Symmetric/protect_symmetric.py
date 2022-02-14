@@ -79,7 +79,7 @@ def decrypt(in_file: str, password: bytes) -> bytes:
     try:
         h.verify(hmac)
     except ValueError:
-        print('The message or the key is wrong')
+        print('[!]: The message or the key is wrong')
         sys.exit(1)
     
     # Data Decryption

@@ -38,12 +38,14 @@ optional arguments:
 
 For instance: 
 ```sh
+❯ cd ./FileEncryptionTool/src/cryptography/Symmetric
 ❯ python3 protect_symmetric.py -e -i ../../../plain -o ../../../encrypt password
 
 [+]: Encryption success: ../../../encrypt
 ```
 
 ```sh
+❯ cd ./FileEncryptionTool/src/cryptography/Symmetric
 ❯ python3 protect_symmetric.py -d -i ../../../encrypt -o ../../../decrypt password
 
 [+]: Decryption success: ../../../decrypt
@@ -59,11 +61,13 @@ Generate private/public keys for sender and receiver.
 
 Using generate-keys.sh script: 
 ```sh
-❯ ./generate-keys.sh [((clear|cl) | <nb key-pair>)]
+❯ cd ./FileEncryptionTool
+❯ ./generate-keys.sh 
 ```
 
 Manually: 
 ```sh
+❯ cd ./FileEncryptionTool
 ❯ openssl genrsa 2122 > rsa-1-priv.pem
 ❯ openssl rsa -pubout -in rsa-1-priv.pem > rsa-1-pub.pem
 
@@ -91,12 +95,95 @@ optional arguments:
 
 For instance:
 ```sh
+❯ cd ./FileEncryptionTool/src/cryptography/Asymmetric
 ❯ python3 protect_asymmetric.py -e -i ../../../plain -o ../../../encrypt -priv ../../../rsa-1-priv.pem -pub ../../../rsa-2-pub.pem
 
 [+]: Encryption success: ../../../encrypt
+```
 
+```sh
+❯ cd ./FileEncryptionTool/src/cryptography/Asymmetric
 ❯ python3 protect_asymmetric.py -d -i ../../../encrypt -o ../../../decrypt -priv ../../../rsa-2-priv.pem -pub ../../../rsa-1-pub.pem
 
-The signature is authentic.
+[+]: The signature is authentic.
+[+]: Decryption success: ../../../decrypt
+```
+
+<br/>
+
+### Multi User Encryption
+
+#### Generating keys
+
+Using generate-keys.sh script: 
+```sh
+# Generates 3 key-pairs
+❯ cd ./FileEncryptionTool
+❯ ./generate-keys.sh 3 
+```
+
+General usage: 
+```sh
+usage: multi_protect.py [-h] {e,d} ...
+
+Multi user encryption tool: AES-256-CBC symmetric encryption, RSA asymmetric encryption & RSA-SHA256 PKCS#1 PSS signature integrity check
+
+positional arguments:
+  {e,d}       Multi User Encryption Mode
+    e         Encryption Mode
+    d         Decryption Mode
+
+optional arguments:
+  -h, --help  show this help message and exit
+```
+
+Encryption module usage: 
+```sh
+usage: multi_protect.py e [-h] input_file output_file my_sign_priv_key my_ciph_pub_key users_ciph_pub [users_ciph_pub ...]
+
+positional arguments:
+  input_file        plain input file
+  output_file       encrypted output file
+  my_sign_priv_key  my private signature key
+  my_ciph_pub_key   my public cipher key
+  users_ciph_pub    users public cipher key
+
+optional arguments:
+  -h, --help        show this help message and exit
+```
+
+Decryption module usage:
+```sh
+usage: multi_protect.py d [-h] input_file output_file my_ciph_priv_key my_ciph_pub_key sender_sign_pub
+
+positional arguments:
+  input_file        encrypted input file
+  output_file       decrypted output file
+  my_ciph_priv_key  my private cipher key
+  my_ciph_pub_key   my public cipher key
+  sender_sign_pub   sender public signature key
+
+optional arguments:
+  -h, --help        show this help message and exit
+```
+
+For instance:
+- Encryption of the file: plain
+- Sender using: key-pair-1/
+- Receiver using: key-pair-1/, key-pair-2/, key-pair-3/
+```sh
+❯ cd ./FileEncryptionTool/src/cryptography/Multi-User-Encryption
+❯ python3 multi_protect.py e ../../../plain ../../../encrypt ../../../key-pair-1/signature-1-priv.pem ../../../key-pair-1/cipher-1-pub.pem ../../../key-pair-2/cipher-2-pub.pem ../../../key-pair-3/cipher-3-pub.pem
+
+[+]: Encryption success: ../../../encrypt
+```
+
+- Decryption of the file: encrypt
+- Receiver using: key-pair-2/ and signature-1-pub.pem (Sender public signature key)
+```sh
+❯ cd ./FileEncryptionTool/src/cryptography/Multi-User-Encryption
+❯ python3 multi_protect.py d ../../../encrypt ../../../decrypt ../../../key-pair-2/cipher-2-priv.pem ../../../key-pair-2/cipher-2-pub.pem ../../../key-pair-1/signature-1-pub.pem
+
+[+]: The signature is authentic.
 [+]: Decryption success: ../../../decrypt
 ```

@@ -71,9 +71,9 @@ def decrypt(in_file: str, private_key: str, public_key: str) -> tuple:
 
     try:
         verifier.verify(h, signature)
-        print('The signature is authentic.')
+        print('[+]: The signature is authentic.')
     except:
-        print('The signature is not authentic.')
+        print('[!]: The signature is not authentic.')
         sys.exit(1)
 
     # Decryption of the symmetric key
