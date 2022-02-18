@@ -15,6 +15,9 @@ This project is about creating a tool that encrypt/decrypt files using AES-256-C
 
 ## Getting started
 
+```sh
+❯ pip install pycryptodome
+```
 
 ### Symmetric encryption
 

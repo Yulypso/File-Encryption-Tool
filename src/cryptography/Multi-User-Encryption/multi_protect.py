@@ -116,10 +116,10 @@ def get_current_param(input_bytes):
 def get_kpub_sha256(input_bytes: bytes, my_ciph_pub_key: bytes):
 
     h = SHA256.new(my_ciph_pub_key)
+    found_sha256, found_RSA_kpub = b'', b''
 
     while(input_bytes[0].to_bytes(1, byteorder='little') != b'\x01'):
         sha256, RSA_kpub, input_bytes = get_current_param(input_bytes)
-        found_sha256, found_RSA_kpub = b'', b''
         if sha256 == h.digest():
             found_sha256 = sha256
             found_RSA_kpub = RSA_kpub
