@@ -4,7 +4,7 @@
 # Date: 03/02/2022
 
 
-if [ $# == 0 ]; then
+if [ $# = 0 ]; then
     echo '[-]: Deleting keys . . .'
     rm rsa-1-priv.pem
     rm rsa-1-pub.pem
@@ -21,12 +21,12 @@ if [ $# == 0 ]; then
     openssl rsa -pubout -in rsa-2-priv.pem > rsa-2-pub.pem
     echo '[+]: rsa-2-pub.pem'
 
-elif [ $1 == 'clear' ] || [ $1 == 'cl' ]; then
+elif [ "$1" = 'clear' ] || [ "$1" = 'cl' ]; then
     echo "[-]: Deleting keys for key-pair-*"
     rm -rf key-pair-*
     rm -rf *.pem
 
-elif [ $# == 1 ]; then
+elif [ $# = 1 ]; then
     for i_name in $(seq 1 $1)
     do
         echo "[+]: Generating keys for key-pair-$i_name"
