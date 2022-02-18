@@ -51,6 +51,8 @@ For instance:
 [+]: Decryption success: ../../../decrypt
 ```
 
+---
+
 <br/>
 
 ### Asymmetric encryption
@@ -109,6 +111,8 @@ For instance:
 [+]: Decryption success: ../../../decrypt
 ```
 
+---
+
 <br/>
 
 ### Multi User Encryption
@@ -119,7 +123,7 @@ Using generate-keys.sh script:
 ```sh
 # Generates 3 key-pairs
 ❯ cd ./FileEncryptionTool
-❯ ./generate-keys.sh 3 
+❯ ./generate-keys.sh 4
 ```
 
 General usage: 
@@ -173,11 +177,12 @@ For instance:
 - Receiver using: key-pair-1/, key-pair-2/, key-pair-3/
 ```sh
 ❯ cd ./FileEncryptionTool/src/cryptography/Multi-User-Encryption
-❯ python3 multi_protect.py e ../../../plain ../../../encrypt ../../../key-pair-1/signature-1-priv.pem ../../../key-pair-1/cipher-1-pub.pem ../../../key-pair-2/cipher-2-pub.pem ../../../key-pair-3/cipher-3-pub.pem
+❯ python3 multi_protect.py e ../../../plain ../../../encrypt ../../../key-pair-1/signature-1-priv.pem ../../../key-pair-1/cipher-1-pub.pem ../../../key-pair-2/cipher-2-pub.pem ../../../key-pair-3/cipher-3-pub.pem ../../../key-pair-3/cipher-3-pub.pem
 
 [+]: Encryption success: ../../../encrypt
 ```
 
+**Authorized**
 - Decryption of the file: encrypt
 - Receiver using: key-pair-2/ and signature-1-pub.pem (Sender public signature key)
 ```sh
@@ -187,3 +192,31 @@ For instance:
 [+]: The signature is authentic.
 [+]: Decryption success: ../../../decrypt
 ```
+
+**Unauthorized: not in recipient users**
+- decryption of the file: encrypt
+- Receiver using: key-pair-4/ and signature-1-pub.pem (Sender public signature key)
+```sh
+❯ cd ./FileEncryptionTool/src/cryptography/Multi-User-Encryption
+❯ python3 multi_protect.py d ../../../encrypt ../../../decrypt ../../../key-pair-4/cipher-4-priv.pem ../../../key-pair-4/cipher-4-pub.pem ../../../key-pair-1/signature-1-pub.pem
+
+[+]: The signature is authentic.
+[!]: Public key not found
+```
+
+> User n°4 cannot decrypt the message because he is not in the list of recipient users even if the signature is authentic.
+
+
+**Unauthorized: signature is not authentic**
+- decryption of the file: encrypt
+- Receiver using: key-pair-4/ and signature-1-pub.pem (Sender public signature key)
+```sh
+❯ cd ./FileEncryptionTool/src/cryptography/Multi-User-Encryption
+❯ python3 multi_protect.py d ../../../encrypt ../../../decrypt ../../../key-pair-3/cipher-3-priv.pem ../../../key-pair-3/cipher-3-pub.pem ../../../key-pair-4/signature-4-pub.pem
+
+[!]: The signature is not authentic.
+```
+
+> User n°3 cannot verify the integrity of the message since the signature is not authentic. 
+
+> The program does not allow the decryption of the message if the signature is not authentic although the message can be correctly decrypted in our case because user 3 is among the recipients. 

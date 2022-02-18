@@ -119,6 +119,7 @@ def get_kpub_sha256(input_bytes: bytes, my_ciph_pub_key: bytes):
 
     while(input_bytes[0].to_bytes(1, byteorder='little') != b'\x01'):
         sha256, RSA_kpub, input_bytes = get_current_param(input_bytes)
+        found_sha256, found_RSA_kpub = b'', b''
         if sha256 == h.digest():
             found_sha256 = sha256
             found_RSA_kpub = RSA_kpub
@@ -144,7 +145,7 @@ def decrypt(input_file: str, my_ciph_priv_key: str, my_ciph_pub_key: str, sender
         print('[!]: Public key not found')
         sys.exit(1)
 
-    print('[+] Public key found')
+    print('[+]: Public key found')
     # Decryption of the symmetric key
     priv_key = RSA.importKey(get_bytes_from_file(my_ciph_priv_key))
     pkcs1 = PKCS1_OAEP.new(priv_key, hashAlgo=SHA256)

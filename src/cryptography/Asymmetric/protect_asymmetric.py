@@ -31,20 +31,32 @@ def encrypt(in_file: str, private_key: str, public_key: str) -> tuple:
     iv = generate_key(AES.block_size)  # AES BLOCK SIZE = 16 bytes
 
     # Open and read plain file
-    with open(in_file, 'rb') as fin:
-        data = fin.read()
+    try: 
+        with open(in_file, 'rb') as fin:
+            data = fin.read()
+    except:
+        print('[!]: File not found:', in_file)
+        sys.exit(1)
 
     # Data Encryption - Confidentiality    
     aes = AES.new(kc, AES.MODE_CBC, iv=iv)
     c_buffer = aes.encrypt(pad(data, AES.block_size))
 
-    # Encryption of the Symmetric Key - Confidentiality    
-    pub_key = RSA.importKey(open(public_key).read())
+    # Encryption of the Symmetric Key - Confidentiality   
+    try: 
+        pub_key = RSA.importKey(open(public_key).read())
+    except:
+        print('[!]: File not found:', public_key)
+        sys.exit(1)
     cipher = PKCS1_OAEP.new(pub_key, hashAlgo=SHA256)
     ckey_buffer = cipher.encrypt(kc)       # W = ckey_buffer
 
     # Signature W|iv|ciphered - Integrity
-    priv_key = RSA.import_key(open(private_key).read())
+    try:
+        priv_key = RSA.import_key(open(private_key).read())
+    except:
+        print('[!]: File not found:', private_key)
+        sys.exit(1)
     h = SHA256.new(ckey_buffer + c_buffer + iv)
     signature = pss.new(priv_key).sign(h)
 
@@ -58,11 +70,27 @@ def decrypt(in_file: str, private_key: str, public_key: str) -> tuple:
     Output: bytes
     '''
     # Open and read parameters & plain file
+    try:
+        with open(in_file, 'rb') as fin:
+            print('', end='')
+    except:
+        print('[!]: File not found:', in_file)
+        sys.exit(1)
+        
     with open(in_file, 'rb') as fin:
-        ckey_buffer = fin.read(int(RSA.importKey(open(private_key).read()).size_in_bytes()))
+        try:
+            ckey_buffer = fin.read(int(RSA.importKey(open(private_key).read()).size_in_bytes()))
+        except:
+            print('[!]: File not found:', private_key)
+            sys.exit(1)
         iv = fin.read(AES.block_size) # AES BLOCK SIZE = 16 bytes
-        signature = fin.read(int(RSA.importKey(open(public_key).read()).size_in_bytes()))
+        try:
+            signature = fin.read(int(RSA.importKey(open(public_key).read()).size_in_bytes()))
+        except:
+            print('[!]: File not found:', public_key)
+            sys.exit(1)
         c_buffer = fin.read()
+   
 
     #  Integrity check signature
     pub_key = RSA.import_key(open(public_key).read())

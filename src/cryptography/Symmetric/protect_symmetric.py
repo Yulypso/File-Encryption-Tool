@@ -35,8 +35,12 @@ def encrypt(in_file: str, password: bytes) -> tuple:
     kc, ki = derivate_master_key(km=km)
 
     # Open and read plain file
-    with open(in_file, 'rb') as fin:
-        data = fin.read()
+    try:
+        with open(in_file, 'rb') as fin:
+            data = fin.read()
+    except:
+        print('[!]: File not found:', in_file)
+        sys.exit(1)
 
     # Data Encryption - Confidentiality
     aes = AES.new(kc, AES.MODE_CBC, iv=iv)
@@ -58,12 +62,16 @@ def decrypt(in_file: str, password: bytes) -> bytes:
     Input: HMAC || IV || SALT || CIPHERTEXT
     Output: bytes
     '''
-    with open(in_file, 'rb') as fin:
-        hmac = fin.read(32)
-        iv = fin.read(16)
-        salt = fin.read(8)
-        c_buffer = fin.read()
-
+    try:
+        with open(in_file, 'rb') as fin:
+            hmac = fin.read(32)
+            iv = fin.read(16)
+            salt = fin.read(8)
+            c_buffer = fin.read()
+    except:
+        print('[!]: File not found:', in_file)
+        sys.exit(1)
+    
     # Derivate password
     km = derivate_password(password=password, salt=salt, counter=8192)
 
