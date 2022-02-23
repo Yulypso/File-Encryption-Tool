@@ -114,7 +114,6 @@ def get_current_param(input_bytes):
     return sha256, RSA_kpub, input_bytes[33+256:]
 
 def get_kpub_sha256(input_bytes: bytes, my_ciph_pub_key: bytes):
-
     h = SHA256.new(my_ciph_pub_key)
     found_sha256, found_RSA_kpub = b'', b''
 
@@ -220,12 +219,39 @@ def arg_parser() -> None:
 
     return parser
 
+class MyParser:
+    def __init__(self, mode, a2, a3, a4, a5, a6):
+        if mode == '-e':
+            self.input_file = a2
+            self.output_file = a3
+            self.my_sign_priv_key = a4
+            self.my_ciph_pub_key = a5
+            self.users_ciph_pub = a6
+        elif mode == '-d':
+            self.input_file = a2
+            self.output_file = a3
+            self.my_ciph_priv_key = a4
+            self.my_ciph_pub_key = a5
+            self.sender_sign_pub = a6
 
 if __name__ == '__main__':
-
+    # Argparser version
     if len(sys.argv) <= 1:
         args = arg_parser().parse_args(['-h'])
     else:
         args = arg_parser().parse_args()
         args.func(args)
+    
+    '''
+    # Custom Parser (wrapper version)
+    if len(sys.argv) <= 1:
+        print('Encryption: \nusage: multi_protect.py -e [-h] input_file output_file my_sign_priv_key my_ciph_pub_key users_ciph_pub [users_ciph_pub ...]')
+        print('Decryption: \nusage: multi_protect.py -d [-h] input_file output_file my_ciph_priv_key my_ciph_pub_key sender_sign_pub')
+    else:
+        if sys.argv[1] == '-e':
+            encryption_mode(MyParser(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5], sys.argv[6:]))   
+        elif sys.argv[1] == '-d':
+            decryption_mode(MyParser(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5], sys.argv[6]))
+    '''
+
     sys.exit(0)
